@@ -21,6 +21,38 @@ TradingIQ API is an automation API for trading on various cryptocurrency exchang
 - `start`: Runs the compiled JavaScript code.
 - `test`: Runs the tests using Jest.
 
+## Endpoints
+/api/longEntryPrice
+/api/setLongTpPrice
+/api/setLongSlPrice
+/api/shortEntryPrice
+/api/setShortTpPrice
+/api/setShortSlPrice
+
+## Endpoint request body
+{
+    // Position settings
+    exchange?: string;  // phemex or bitfinex, phemex is default
+    symbol: string;
+    amount?: number;
+    leverage?: number;
+    orderType?: 'limit' | 'market'
+
+    // TradingIQ parameters
+    longLimitOrderPrice?: number;
+    shortLimitOrderPrice?: number;
+    longPositionTp1?: number;
+    // longPositionTp2?: number;
+    longPositionSl?: number;
+    shortPositionTp1?: number;
+    // shortPositionTp2?: number;
+    shortPositionSl?: number;
+    // panicProfitEntry?: number;
+    // panicProfitTp1?: number;
+    // panicProfitTp2?: number;
+    // panicProfitSl?: number;
+}
+
 ## Environment Variables
 Refer to `.env.template` for the required environment variables. Make sure to set the API keys and secrets for the exchanges you want to use.
 
