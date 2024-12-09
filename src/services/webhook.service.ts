@@ -1,7 +1,6 @@
 import { IWebhookPayload } from '../interfaces/IWebhookPayload';
 import dotenv from 'dotenv';
 import { PhemexService } from './exchanges/phemex.service';
-import { BitfinexService } from './exchanges/bitfinex.service';
 
 // Load environment variables from .env file
 dotenv.config();
@@ -18,9 +17,6 @@ export class WebhookService {
     if (process.env['ENABLE_PHEMEX'] === 'true' && process.env['PHEMEX_API_KEY'] && process.env['PHEMEX_API_SECRET']) {
       this.exchangeServices['phemex'] = new PhemexService();
     }
-    if (process.env['ENABLE_BITFINEX'] === 'true' && process.env['BITFINEX_API_KEY'] && process.env['BITFINEX_API_SECRET']) {
-      this.exchangeServices['bitfinex'] = new BitfinexService();
-    }
   }
 
   // Get the exchange service instance by name
@@ -36,33 +32,61 @@ export class WebhookService {
     return payload.exchange?.toUpperCase() || process.env['DEFAULT_EXCHANGE']?.toUpperCase() + '';
   }
 
-  async handleLongEntryPrice(payload: IWebhookPayload) {   
+  async createLongOrder(payload: IWebhookPayload) {   
     const exchangeService = this.getExchangeService(this.getExchange(payload));
-    return await exchangeService.handleLongEntryPrice(payload);
+    return await exchangeService.createLongOrder(payload);
   }
 
-  async handleSetLongTpPrice(payload: IWebhookPayload) {
+  async setLongTakeProfitPrice(payload: IWebhookPayload) {
     const exchangeService = this.getExchangeService(this.getExchange(payload));
-    return await exchangeService.handleSetLongTpPrice(payload);
+    return await exchangeService.setLongTakeProfitPrice(payload);
   }
 
-  async handleSetLongSlPrice(payload: IWebhookPayload) {
+  async setLongStopLossPrice(payload: IWebhookPayload) {
     const exchangeService = this.getExchangeService(this.getExchange(payload));
-    return await exchangeService.handleSetLongSlPrice(payload);
+    return await exchangeService.setLongStopLossPrice(payload);
   }
 
-  async handleShortEntryPrice(payload: IWebhookPayload) {
+  async createShortOrder(payload: IWebhookPayload) {
     const exchangeService = this.getExchangeService(this.getExchange(payload));
-    return await exchangeService.handleShortEntryPrice(payload);
+    return await exchangeService.createShortOrder(payload);
   }
 
-  async handleSetShortTpPrice(payload: IWebhookPayload) {
+  async setShortTakeProfitPrice(payload: IWebhookPayload) {
     const exchangeService = this.getExchangeService(this.getExchange(payload));
-    return await exchangeService.handleSetShortTpPrice(payload);
+    return await exchangeService.setShortTakeProfitPrice(payload);
   }
 
-  async handleSetShortSlPrice(payload: IWebhookPayload) {
+  async setShortStopLossPrice(payload: IWebhookPayload) {
     const exchangeService = this.getExchangeService(this.getExchange(payload));
-    return await exchangeService.handleSetShortSlPrice(payload);
+    return await exchangeService.setShortStopLossPrice(payload);
+  }
+
+  async closeLongPositions(payload: IWebhookPayload) {
+    const exchangeService = this.getExchangeService(this.getExchange(payload));
+    try {
+      await exchangeService.closeLongPositions(payload);
+    } catch (error) {
+      console.error(`Error closing long positions: ${(error as Error).message}`);
+    }
+    try {
+      await exchangeService.cancelLongOrders(payload);
+    } catch (error) {
+      console.error(`Error closing long orders: ${(error as Error).message}`);
+    }
+  }
+
+  async closeShortPositions(payload: IWebhookPayload) {
+    const exchangeService = this.getExchangeService(this.getExchange(payload));
+    try {
+      await exchangeService.closeShortPositions(payload);
+    } catch (error) {
+      console.error(`Error closing short positions: ${(error as Error).message}`);
+    }
+    try {
+      await exchangeService.cancelShortOrders(payload);
+    } catch (error) {
+      console.error(`Error closing short orders: ${(error as Error).message}`);
+    }
   }
 }

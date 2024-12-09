@@ -74,6 +74,7 @@ So, for now the basics of this is working:
 - receive and compute values with names like TradingIQ automation parameters ( tp2 and panic are actually not used, because I don't know how it should be handled atm)
 - splitted the exchange specific implementation parts for order creation and updating workflow in separate files (actually only phemex tested .. bitfinex is only generated code, but as soon as I have an account there I will also check that)
 - add sl/tp directly when making an order instead of needing a separate request afterwards
+- if amount, stopLossAmount or takeProfitAmount isn't given in the payload explicitly, automatically try to determine amount based on existing position sizes (contract & spot)
 
 
 TODO:

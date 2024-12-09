@@ -3,6 +3,8 @@ export interface IWebhookPayload {
     exchange?: string;
     symbol: string;
     amount?: number;
+    stopLossAmount?: number;
+    takeProfitAmount?: number;
     leverage?: number;
     orderType?: 'limit' | 'market'
 

@@ -13,21 +13,25 @@ interface Route {
 }
 
 export enum RouteActions {
-  LongEntryPrice = "LongEntryPrice",
+  LongOrder = "LongOrder",
   SetLongTpPrice = "SetLongTpPrice",
   SetLongSlPrice = "SetLongSlPrice",
-  ShortEntryPrice = "ShortEntryPrice",
+  ShortOrder = "ShortOrder",
   SetShortTpPrice = "SetShortTpPrice",
-  SetShortSlPrice = "SetShortSlPrice"
+  SetShortSlPrice = "SetShortSlPrice",
+  CloseLong = "CloseLong",
+  CloseShort = "CloseShort"
 }
 
 const routes: Route[] = [
-  { path: '/longEntryPrice', action: RouteActions.LongEntryPrice},
+  { path: '/longEntryPrice', action: RouteActions.LongOrder},
   { path: '/setLongTpPrice', action: RouteActions.SetLongTpPrice},
   { path: '/setLongSlPrice', action: RouteActions.SetLongSlPrice},
-  { path: '/shortEntryPrice', action: RouteActions.ShortEntryPrice},
+  { path: '/shortEntryPrice', action: RouteActions.ShortOrder},
   { path: '/setShortTpPrice', action: RouteActions.SetShortTpPrice},
-  { path: '/setShortSlPrice', action: RouteActions.SetShortSlPrice}
+  { path: '/setShortSlPrice', action: RouteActions.SetShortSlPrice},
+  { path: '/closeLong', action: RouteActions.CloseLong},
+  { path: '/closeShort', action: RouteActions.CloseShort}
 ] ;
 
 router.use((req, _res, next) => {

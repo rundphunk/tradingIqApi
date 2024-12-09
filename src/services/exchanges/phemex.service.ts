@@ -22,14 +22,19 @@ export class PhemexService {
         secret: secret
       });
       if (useSandbox) this.exchange.setSandboxMode(true);
+      this.exchange.loadMarkets();
     } else {
       throw new Error('Phemex API keys not set');
     }
   }
 
-  async handleLongEntryPrice(payload: IWebhookPayload) {
+  isUsingContracts(payload: IWebhookPayload) {
+    return payload.symbol.includes(':');
+  }
+
+  async createLongOrder(payload: IWebhookPayload) {
     const resultingOrders = [];
-    await this.exchange.loadMarkets();
+    
     await this.exchange.cancelAllOrders(payload.symbol);
 
     if (payload.leverage) {
@@ -57,64 +62,103 @@ export class PhemexService {
     }
     resultingOrders.push(createdOrder.id);
     // also add corresponding tp/sl orders directly
-    if (payload.longPositionTp1) resultingOrders.push(await this.handleSetLongTpPrice(payload));
-    if (payload.longPositionSl) resultingOrders.push(await this.handleSetLongSlPrice(payload));
+    if (payload.longPositionTp1) resultingOrders.push(await this.setLongTakeProfitPrice(payload));
+    if (payload.longPositionSl) resultingOrders.push(await this.setLongStopLossPrice(payload));
 
     return { message: 'Position opened', orders: resultingOrders.concat(', ')};
   }
 
-  async handleSetLongTpPrice(payload: IWebhookPayload) {
-    await this.exchange.loadMarkets();
-    let contracts;
-
-    const positions = await this.exchange.fetchPositions([payload.symbol]);
-    const position = positions.find((pos: any) => pos.symbol === payload.symbol && pos.side === 'long');
-    if (position) {
-      contracts = position.contracts;
+  async setLongTakeProfitPrice(payload: IWebhookPayload) {
+    let amount;
+    if (payload.amount) { // if we set the amount in the payload we use that and dont look for existing orders or positions
+      amount = payload.amount;
     } else {
-      const openOrders = await this.exchange.fetchOpenOrders(payload.symbol);
-      const openLongOrder = openOrders.find(order => order.side === 'buy' && order.status === 'open');
-      if (openLongOrder) {
-        contracts = openLongOrder.amount;
+      if (this.isUsingContracts(payload)){ // means we may have a position to look for to determine its contract size
+        // search possible existing contract size
+        const positions = await this.exchange.fetchPositions([payload.symbol]);
+        const position = positions.find((pos: any) => pos.symbol === payload.symbol && pos.side === 'long');
+        if (position) {
+          amount = position.contracts;
+        } else {
+          // if we have no open position we look out for an open order
+          const openOrders = await this.exchange.fetchOpenOrders(payload.symbol);
+          const openLongOrder = openOrders.find(order => order.side === 'buy' && order.status === 'open');
+          if (openLongOrder) {
+            amount = openLongOrder.amount;
+          } else {
+            return { message: `No long position or open long order found for ${payload.symbol} and also no amount in request given` };
+          }
+        }
+        // get possible old tp order and cancel it
+        const openOrders = await this.exchange.fetchOpenOrders(payload.symbol);
+        const existingTpOrder = openOrders.find(order => order.type === 'limit' && order.side === 'sell' && order.status === 'open');
+        if (existingTpOrder && existingTpOrder.price === payload.longPositionTp1) {
+          return { message: 'Existing TakeProfit order matches the new one', orderId: existingTpOrder.id };
+        } else if (existingTpOrder) {
+          await this.exchange.cancelOrder(existingTpOrder.id, payload.symbol);
+        }
       } else {
-        return { message: `No long position or open long order found for ${payload.symbol}` };
+        const openOrders = await this.exchange.fetchOpenOrders(payload.symbol);
+          const openLongOrder = openOrders.find(order => order.side === 'buy' && order.status === 'open');
+          if (openLongOrder) {
+            amount = openLongOrder.amount;
+          } else {
+            return { message: `No open long order found for ${payload.symbol}` };
+          }
       }
-    }
-
-    const openOrders = await this.exchange.fetchOpenOrders(payload.symbol);
-    const existingTpOrder = openOrders.find(order => order.type === 'limit' && order.side === 'sell' && order.status === 'open');
-    if (existingTpOrder && existingTpOrder.price === payload.longPositionTp1) {
-      return { message: 'Existing TakeProfit order matches the new one', orderId: existingTpOrder.id };
-    } else if (existingTpOrder) {
-      await this.exchange.cancelOrder(existingTpOrder.id, payload.symbol);
     }
 
     const createdOrder = await this.exchange.createOrder(
       payload.symbol,
       'Limit',
       'sell',
-      contracts,
+      amount,
       payload.longPositionTp1
     );
 
     return { message: 'TakeProfit order placed', orderId: createdOrder.id };
   }
 
-  async handleSetLongSlPrice(payload: IWebhookPayload) {
-    await this.exchange.loadMarkets();
-
-    const positions = await this.exchange.fetchPositions([payload.symbol]);
-    const position = positions.find((pos: any) => pos.symbol === payload.symbol && pos.side === 'long');
-    if (!position) return { message: `No long position found for ${payload.symbol}` };
-
-    const conditionalOrders = await this.exchange.fetchOpenOrders(payload.symbol, undefined, undefined, {
-      'stop': true
-    });
-    const existingSlOrder = conditionalOrders.find(order => order.type === 'Stop' && order.side === 'sell' && order.status === 'open');
-    if (existingSlOrder && existingSlOrder.stopPrice === payload.longPositionSl) {
-      return { message: 'Existing StopLoss order matches the new one', orderId: existingSlOrder.id };
-    } else if (existingSlOrder) {
-      await this.exchange.cancelOrder(existingSlOrder.id, payload.symbol);
+  async setLongStopLossPrice(payload: IWebhookPayload) {
+    let amount;
+    if (payload.stopLossAmount) { // if we set the amount in the payload we use that and dont look for existing orders or positions
+      amount = payload.stopLossAmount;
+    } else {
+      if (this.isUsingContracts(payload)){ // means we may have a position to look for to determine its contract size
+        // search possible existing contract size
+        const positions = await this.exchange.fetchPositions([payload.symbol]);
+        const position = positions.find((pos: any) => pos.symbol === payload.symbol && pos.side === 'long');
+        if (position) {
+          amount = position.contracts;
+        } else {
+          // if we have no open position we look out for an open order
+          const openOrders = await this.exchange.fetchOpenOrders(payload.symbol);
+          const openLongOrder = openOrders.find(order => order.side === 'buy' && order.status === 'open');
+          if (openLongOrder) {
+            amount = openLongOrder.amount;
+          } else {
+            return { message: `No long position or open long order found for ${payload.symbol} and also no amount in request given` };
+          }
+        }
+        // get possible old sl order and cancel it
+        const conditionalOrders = await this.exchange.fetchOpenOrders(payload.symbol, undefined, undefined, {
+          'stop': true
+        });
+        const existingSlOrder = conditionalOrders.find(order => order.type === 'Stop' && order.side === 'sell' && order.status === 'open');
+        if (existingSlOrder && existingSlOrder.stopPrice === payload.longPositionSl) {
+          return { message: 'Existing StopLoss order matches the new one', orderId: existingSlOrder.id };
+        } else if (existingSlOrder) {
+          await this.exchange.cancelOrder(existingSlOrder.id, payload.symbol);
+        }
+      } else {
+        const openOrders = await this.exchange.fetchOpenOrders(payload.symbol);
+          const openLongOrder = openOrders.find(order => order.side === 'buy' && order.status === 'open');
+          if (openLongOrder) {
+            amount = openLongOrder.amount;
+          } else {
+            return { message: `No open long order found for ${payload.symbol}` };
+          }
+      }
     }
 
     const params = {
@@ -124,7 +168,7 @@ export class PhemexService {
       payload.symbol,
       'Stop',
       'sell',
-      position.contracts,
+      amount,
       payload.longPositionSl,
       params
     );
@@ -132,9 +176,8 @@ export class PhemexService {
     return { message: 'StopLoss order placed', orderId: createdOrder.id };
   }
 
-  async handleShortEntryPrice(payload: IWebhookPayload) {
+  async createShortOrder(payload: IWebhookPayload) {
     const resultingOrders = [];
-    await this.exchange.loadMarkets();
     await this.exchange.cancelAllOrders(payload.symbol);
 
     if (payload.leverage) {
@@ -162,64 +205,103 @@ export class PhemexService {
     }
     resultingOrders.push(createdOrder.id);
     // also add corresponding tp/sl orders directly
-    if (payload.shortPositionTp1) resultingOrders.push(await this.handleSetShortTpPrice(payload));
-    if (payload.shortPositionSl) resultingOrders.push(await this.handleSetShortSlPrice(payload));
+    if (payload.shortPositionTp1) resultingOrders.push(await this.setShortTakeProfitPrice(payload));
+    if (payload.shortPositionSl) resultingOrders.push(await this.setShortStopLossPrice(payload));
 
     return { message: 'Position opened', orders: resultingOrders.concat(', ')};
   }
 
-  async handleSetShortTpPrice(payload: IWebhookPayload) {
-    await this.exchange.loadMarkets();
-    let contracts;
-
-    const positions = await this.exchange.fetchPositions([payload.symbol]);
-    const position = positions.find((pos: any) => pos.symbol === payload.symbol && pos.side === 'short');
-    if (position) {
-      contracts = position.contracts;
+  async setShortTakeProfitPrice(payload: IWebhookPayload) {
+    let amount;
+    if (payload.takeProfitAmount) { // if we set the amount in the payload we use that and dont look for existing orders or positions
+      amount = payload.takeProfitAmount;
     } else {
-      const openOrders = await this.exchange.fetchOpenOrders(payload.symbol);
-      const openShortOrder = openOrders.find(order => order.side === 'sell' && order.status === 'open');
-      if (openShortOrder) {
-        contracts = openShortOrder.amount;
+      if (this.isUsingContracts(payload)){ // means we may have a position to look for to determine its contract size
+        // search possible existing contract size
+        const positions = await this.exchange.fetchPositions([payload.symbol]);
+        const position = positions.find((pos: any) => pos.symbol === payload.symbol && pos.side === 'short');
+        if (position) {
+          amount = position.contracts;
+        } else {
+          // if we have no open position we look out for an open order
+          const openOrders = await this.exchange.fetchOpenOrders(payload.symbol);
+          const openShortOrder = openOrders.find(order => order.side === 'sell' && order.status === 'open');
+          if (openShortOrder) {
+            amount = openShortOrder.amount;
+          } else {
+            return { message: `No short position or open short order found for ${payload.symbol} and also no amount in request given` };
+          }
+        }
+        // get possible old tp order and cancel it
+        const openOrders = await this.exchange.fetchOpenOrders(payload.symbol);
+        const existingTpOrder = openOrders.find(order => order.type === 'limit' && order.side === 'buy' && order.status === 'open');
+        if (existingTpOrder && existingTpOrder.price === payload.shortPositionTp1) {
+          return { message: 'Existing TakeProfit order matches the new one', orderId: existingTpOrder.id };
+        } else if (existingTpOrder) {
+          await this.exchange.cancelOrder(existingTpOrder.id, payload.symbol);
+        }
       } else {
-        return { message: `No short position or open short order found for ${payload.symbol}` };
+        const openOrders = await this.exchange.fetchOpenOrders(payload.symbol);
+          const openShortOrder = openOrders.find(order => order.side === 'sell' && order.status === 'open');
+          if (openShortOrder) {
+            amount = openShortOrder.amount;
+          } else {
+            return { message: `No open short order found for ${payload.symbol}` };
+          }
       }
-    }
-
-    const openOrders = await this.exchange.fetchOpenOrders(payload.symbol);
-    const existingTpOrder = openOrders.find(order => order.type === 'limit' && order.side === 'buy' && order.status === 'open');
-    if (existingTpOrder && existingTpOrder.price === payload.shortPositionTp1) {
-      return { message: 'Existing TakeProfit order matches the new one', orderId: existingTpOrder.id };
-    } else if (existingTpOrder) {
-      await this.exchange.cancelOrder(existingTpOrder.id, payload.symbol);
     }
 
     const createdOrder = await this.exchange.createOrder(
       payload.symbol,
       'Limit',
       'buy',
-      contracts,
+      amount,
       payload.shortPositionTp1
     );
 
     return { message: 'TakeProfit order placed', orderId: createdOrder.id };
   }
 
-  async handleSetShortSlPrice(payload: IWebhookPayload) {
-    await this.exchange.loadMarkets();
-
-    const positions = await this.exchange.fetchPositions([payload.symbol]);
-    const position = positions.find((pos: any) => pos.symbol === payload.symbol && pos.side === 'short');
-    if (!position) return { message: `No short position found for ${payload.symbol}` };
-
-    const conditionalOrders = await this.exchange.fetchOpenOrders(payload.symbol, undefined, undefined, {
-      'stop': true
-    });
-    const existingSlOrder = conditionalOrders.find(order => order.type === 'Stop' && order.side === 'buy' && order.status === 'open');
-    if (existingSlOrder && existingSlOrder.stopPrice === payload.shortPositionSl) {
-      return { message: 'Existing StopLoss order matches the new one', orderId: existingSlOrder.id };
-    } else if (existingSlOrder) {
-      await this.exchange.cancelOrder(existingSlOrder.id, payload.symbol);
+  async setShortStopLossPrice(payload: IWebhookPayload) {
+    let amount;
+    if (payload.stopLossAmount) { // if we set the amount in the payload we use that and dont look for existing orders or positions
+      amount = payload.stopLossAmount;
+    } else {
+      if (this.isUsingContracts(payload)){ // means we may have a position to look for to determine its contract size
+        // search possible existing contract size
+        const positions = await this.exchange.fetchPositions([payload.symbol]);
+        const position = positions.find((pos: any) => pos.symbol === payload.symbol && pos.side === 'short');
+        if (position) {
+          amount = position.contracts;
+        } else {
+          // if we have no open position we look out for an open order
+          const openOrders = await this.exchange.fetchOpenOrders(payload.symbol);
+          const openShortOrder = openOrders.find(order => order.side === 'sell' && order.status === 'open');
+          if (openShortOrder) {
+            amount = openShortOrder.amount;
+          } else {
+            return { message: `No short position or open short order found for ${payload.symbol} and also no amount in request given` };
+          }
+        }
+        // get possible old sl order and cancel it
+        const conditionalOrders = await this.exchange.fetchOpenOrders(payload.symbol, undefined, undefined, {
+          'stop': true
+        });
+        const existingSlOrder = conditionalOrders.find(order => order.type === 'Stop' && order.side === 'buy' && order.status === 'open');
+        if (existingSlOrder && existingSlOrder.stopPrice === payload.shortPositionSl) {
+          return { message: 'Existing StopLoss order matches the new one', orderId: existingSlOrder.id };
+        } else if (existingSlOrder) {
+          await this.exchange.cancelOrder(existingSlOrder.id, payload.symbol);
+        }
+      } else {
+        const openOrders = await this.exchange.fetchOpenOrders(payload.symbol);
+          const openShortOrder = openOrders.find(order => order.side === 'sell' && order.status === 'open');
+          if (openShortOrder) {
+            amount = openShortOrder.amount;
+          } else {
+            return { message: `No open short order found for ${payload.symbol}` };
+          }
+      }
     }
 
     const params = {
@@ -229,11 +311,61 @@ export class PhemexService {
       payload.symbol,
       'Stop',
       'buy',
-      position.contracts,
+      amount,
       payload.shortPositionSl,
       params
     );
 
     return { message: 'StopLoss order placed', orderId: createdOrder.id };
+  }
+
+  async closeLongPositions(payload: IWebhookPayload) {
+    const positions = await this.exchange.fetchPositions([payload.symbol]);
+    const longPosition = positions.find((pos: any) => pos.symbol === payload.symbol && pos.side === 'long');
+    if (longPosition) {
+      await this.exchange.createOrder(
+        payload.symbol,
+        'Market',
+        'sell',
+        longPosition.contracts
+      );
+      console.log(`Closed long position for ${payload.symbol}`);
+    } else {
+      console.log(`No long position found for ${payload.symbol}`);
+    }
+  }
+
+  async cancelLongOrders(payload: IWebhookPayload) {
+    const openOrders = await this.exchange.fetchOpenOrders(payload.symbol);
+    const longOrders = openOrders.filter(order => order.side === 'buy');
+    for (const order of longOrders) {
+      await this.exchange.cancelOrder(order.id, payload.symbol);
+      console.log(`Cancelled long order ${order.id} for ${payload.symbol}`);
+    }
+  }
+
+  async closeShortPositions(payload: IWebhookPayload) {
+    const positions = await this.exchange.fetchPositions([payload.symbol]);
+    const shortPosition = positions.find((pos: any) => pos.symbol === payload.symbol && pos.side === 'short');
+    if (shortPosition) {
+      await this.exchange.createOrder(
+        payload.symbol,
+        'Market',
+        'buy',
+        shortPosition.contracts
+      );
+      console.log(`Closed short position for ${payload.symbol}`);
+    } else {
+      console.log(`No short position found for ${payload.symbol}`);
+    }
+  }
+
+  async cancelShortOrders(payload: IWebhookPayload) {
+    const openOrders = await this.exchange.fetchOpenOrders(payload.symbol);
+    const shortOrders = openOrders.filter(order => order.side === 'sell');
+    for (const order of shortOrders) {
+      await this.exchange.cancelOrder(order.id, payload.symbol);
+      console.log(`Cancelled short order ${order.id} for ${payload.symbol}`);
+    }
   }
 }

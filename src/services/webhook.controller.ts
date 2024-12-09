@@ -15,23 +15,29 @@ export class WebhookController {
     try {
       let result;
       switch (action) {
-        case RouteActions.LongEntryPrice:
-          result = await this.service.handleLongEntryPrice(req.body);
+        case RouteActions.LongOrder:
+          result = await this.service.createLongOrder(req.body);
           break;
         case RouteActions.SetLongTpPrice:
-          result = await this.service.handleSetLongTpPrice(req.body);
+          result = await this.service.setLongStopLossPrice(req.body);
           break;
         case RouteActions.SetLongSlPrice:
-          result = await this.service.handleSetLongSlPrice(req.body);
+          result = await this.service.setLongStopLossPrice(req.body);
           break;
-        case RouteActions.ShortEntryPrice:
-          result = await this.service.handleShortEntryPrice(req.body);
+        case RouteActions.ShortOrder:
+          result = await this.service.createShortOrder(req.body);
           break;
         case RouteActions.SetShortTpPrice:
-          result = await this.service.handleSetShortTpPrice(req.body);
+          result = await this.service.setShortTakeProfitPrice(req.body);
           break;
         case RouteActions.SetShortSlPrice:
-          result = await this.service.handleSetShortSlPrice(req.body);
+          result = await this.service.setShortStopLossPrice(req.body);
+          break;
+        case RouteActions.CloseLong:
+          result = await this.service.closeLongPositions(req.body);
+          break;
+        case RouteActions.CloseShort:
+          result = await this.service.closeShortPositions(req.body);
           break;
       }
       res.status(200).json(result);
