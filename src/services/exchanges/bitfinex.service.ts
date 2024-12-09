@@ -5,7 +5,7 @@ import dotenv from 'dotenv';
 // Load environment variables from .env file
 dotenv.config();
 
-export class PhemexService {
+export class BitfinexService {
   private exchange!: Exchange;
 
   constructor() {
@@ -14,17 +14,17 @@ export class PhemexService {
 
   private initializeExchange() {
     const useSandbox = process.env["USE_SANDBOX"] == "true";
-    const apiKey = useSandbox ? process.env["PHEMEX_API_KEY_SANDBOX"] : process.env["PHEMEX_API_KEY"];
-    const secret = useSandbox ? process.env["PHEMEX_API_SECRET_SANDBOX"] : process.env["PHEMEX_API_SECRET"];
+    const apiKey = useSandbox ? process.env["BITFINEX_API_KEY_SANDBOX"] : process.env["BITFINEX_API_KEY"];
+    const secret = useSandbox ? process.env["BITFINEX_API_SECRET_SANDBOX"] : process.env["BITFINEX_API_SECRET"];
     if (apiKey && secret) {
-      this.exchange = new ccxt.phemex({
+      this.exchange = new ccxt.bitfinex({
         apiKey: apiKey,
         secret: secret
       });
       if (useSandbox) this.exchange.setSandboxMode(true);
       this.exchange.loadMarkets();
     } else {
-      throw new Error('Phemex API keys not set');
+      throw new Error('Bitfinex API keys not set');
     }
   }
 
@@ -38,9 +38,9 @@ export class PhemexService {
     await this.exchange.cancelAllOrders(payload.symbol);
 
     if (payload.leverage) {
-      if (!this.exchange.has['setLeverage']) throw new Error('Phemex does not support setting leverage');
+      if (!this.exchange.has['setLeverage']) throw new Error('Bitfinex does not support setting leverage');
       await this.exchange.setLeverage(payload.leverage, payload.symbol);
-      console.log(`Leverage set to ${payload.leverage} for ${payload.symbol} on Phemex`);
+      console.log(`Leverage set to ${payload.leverage} for ${payload.symbol} on Bitfinex`);
     }
 
     let createdOrder = { id: '' };
@@ -71,17 +71,15 @@ export class PhemexService {
 
   async setLongTakeProfitPrice(payload: IWebhookPayload) {
     let amount;
-    if (payload.amount) { // if we set the amount in the payload we use that and dont look for existing orders or positions
+    if (payload.amount) {
       amount = payload.amount;
     } else {
-      if (this.isUsingContracts(payload)){ // means we may have a position to look for to determine its contract size
-        // search possible existing contract size
+      if (this.isUsingContracts(payload)) {
         const positions = await this.exchange.fetchPositions([payload.symbol]);
         const position = positions.find((pos: any) => pos.symbol === payload.symbol && pos.side === 'long');
         if (position) {
           amount = position.contracts;
         } else {
-          // if we have no open position we look out for an open order
           const openOrders = await this.exchange.fetchOpenOrders(payload.symbol);
           const openLongOrder = openOrders.find(order => order.side === 'buy' && order.status === 'open');
           if (openLongOrder) {
@@ -90,7 +88,6 @@ export class PhemexService {
             return { message: `No long position or open long order found for ${payload.symbol} and also no amount in request given` };
           }
         }
-        // get possible old tp order and cancel it
         const openOrders = await this.exchange.fetchOpenOrders(payload.symbol);
         const existingTpOrder = openOrders.find(order => order.type === 'limit' && order.side === 'sell' && order.status === 'open');
         if (existingTpOrder && existingTpOrder.price === payload.longPositionTp1) {
@@ -100,12 +97,12 @@ export class PhemexService {
         }
       } else {
         const openOrders = await this.exchange.fetchOpenOrders(payload.symbol);
-          const openLongOrder = openOrders.find(order => order.side === 'buy' && order.status === 'open');
-          if (openLongOrder) {
-            amount = openLongOrder.amount;
-          } else {
-            return { message: `No open long order found for ${payload.symbol}` };
-          }
+        const openLongOrder = openOrders.find(order => order.side === 'buy' && order.status === 'open');
+        if (openLongOrder) {
+          amount = openLongOrder.amount;
+        } else {
+          return { message: `No open long order found for ${payload.symbol}` };
+        }
       }
     }
 
@@ -122,17 +119,15 @@ export class PhemexService {
 
   async setLongStopLossPrice(payload: IWebhookPayload) {
     let amount;
-    if (payload.stopLossAmount) { // if we set the amount in the payload we use that and dont look for existing orders or positions
+    if (payload.stopLossAmount) {
       amount = payload.stopLossAmount;
     } else {
-      if (this.isUsingContracts(payload)){ // means we may have a position to look for to determine its contract size
-        // search possible existing contract size
+      if (this.isUsingContracts(payload)) {
         const positions = await this.exchange.fetchPositions([payload.symbol]);
         const position = positions.find((pos: any) => pos.symbol === payload.symbol && pos.side === 'long');
         if (position) {
           amount = position.contracts;
         } else {
-          // if we have no open position we look out for an open order
           const openOrders = await this.exchange.fetchOpenOrders(payload.symbol);
           const openLongOrder = openOrders.find(order => order.side === 'buy' && order.status === 'open');
           if (openLongOrder) {
@@ -141,7 +136,6 @@ export class PhemexService {
             return { message: `No long position or open long order found for ${payload.symbol} and also no amount in request given` };
           }
         }
-        // get possible old sl order and cancel it
         const conditionalOrders = await this.exchange.fetchOpenOrders(payload.symbol, undefined, undefined, {
           'stop': true
         });
@@ -153,12 +147,12 @@ export class PhemexService {
         }
       } else {
         const openOrders = await this.exchange.fetchOpenOrders(payload.symbol);
-          const openLongOrder = openOrders.find(order => order.side === 'buy' && order.status === 'open');
-          if (openLongOrder) {
-            amount = openLongOrder.amount;
-          } else {
-            return { message: `No open long order found for ${payload.symbol}` };
-          }
+        const openLongOrder = openOrders.find(order => order.side === 'buy' && order.status === 'open');
+        if (openLongOrder) {
+          amount = openLongOrder.amount;
+        } else {
+          return { message: `No open long order found for ${payload.symbol}` };
+        }
       }
     }
 
@@ -182,9 +176,9 @@ export class PhemexService {
     await this.exchange.cancelAllOrders(payload.symbol);
 
     if (payload.leverage) {
-      if (!this.exchange.has['setLeverage']) throw new Error('Phemex does not support setting leverage');
+      if (!this.exchange.has['setLeverage']) throw new Error('Bitfinex does not support setting leverage');
       await this.exchange.setLeverage(payload.leverage, payload.symbol);
-      console.log(`Leverage set to ${payload.leverage} for ${payload.symbol} on Phemex`);
+      console.log(`Leverage set to ${payload.leverage} for ${payload.symbol} on Bitfinex`);
     }
 
     let createdOrder = { id: '' };
@@ -215,17 +209,15 @@ export class PhemexService {
 
   async setShortTakeProfitPrice(payload: IWebhookPayload) {
     let amount;
-    if (payload.takeProfitAmount) { // if we set the amount in the payload we use that and dont look for existing orders or positions
+    if (payload.takeProfitAmount) {
       amount = payload.takeProfitAmount;
     } else {
-      if (this.isUsingContracts(payload)){ // means we may have a position to look for to determine its contract size
-        // search possible existing contract size
+      if (this.isUsingContracts(payload)) {
         const positions = await this.exchange.fetchPositions([payload.symbol]);
         const position = positions.find((pos: any) => pos.symbol === payload.symbol && pos.side === 'short');
         if (position) {
           amount = position.contracts;
         } else {
-          // if we have no open position we look out for an open order
           const openOrders = await this.exchange.fetchOpenOrders(payload.symbol);
           const openShortOrder = openOrders.find(order => order.side === 'sell' && order.status === 'open');
           if (openShortOrder) {
@@ -234,7 +226,6 @@ export class PhemexService {
             return { message: `No short position or open short order found for ${payload.symbol} and also no amount in request given` };
           }
         }
-        // get possible old tp order and cancel it
         const openOrders = await this.exchange.fetchOpenOrders(payload.symbol);
         const existingTpOrder = openOrders.find(order => order.type === 'limit' && order.side === 'buy' && order.status === 'open');
         if (existingTpOrder && existingTpOrder.price === payload.shortPositionTp1) {
@@ -244,12 +235,12 @@ export class PhemexService {
         }
       } else {
         const openOrders = await this.exchange.fetchOpenOrders(payload.symbol);
-          const openShortOrder = openOrders.find(order => order.side === 'sell' && order.status === 'open');
-          if (openShortOrder) {
-            amount = openShortOrder.amount;
-          } else {
-            return { message: `No open short order found for ${payload.symbol}` };
-          }
+        const openShortOrder = openOrders.find(order => order.side === 'sell' && order.status === 'open');
+        if (openShortOrder) {
+          amount = openShortOrder.amount;
+        } else {
+          return { message: `No open short order found for ${payload.symbol}` };
+        }
       }
     }
 
@@ -266,17 +257,15 @@ export class PhemexService {
 
   async setShortStopLossPrice(payload: IWebhookPayload) {
     let amount;
-    if (payload.stopLossAmount) { // if we set the amount in the payload we use that and dont look for existing orders or positions
+    if (payload.stopLossAmount) {
       amount = payload.stopLossAmount;
     } else {
-      if (this.isUsingContracts(payload)){ // means we may have a position to look for to determine its contract size
-        // search possible existing contract size
+      if (this.isUsingContracts(payload)) {
         const positions = await this.exchange.fetchPositions([payload.symbol]);
         const position = positions.find((pos: any) => pos.symbol === payload.symbol && pos.side === 'short');
         if (position) {
           amount = position.contracts;
         } else {
-          // if we have no open position we look out for an open order
           const openOrders = await this.exchange.fetchOpenOrders(payload.symbol);
           const openShortOrder = openOrders.find(order => order.side === 'sell' && order.status === 'open');
           if (openShortOrder) {
@@ -285,7 +274,6 @@ export class PhemexService {
             return { message: `No short position or open short order found for ${payload.symbol} and also no amount in request given` };
           }
         }
-        // get possible old sl order and cancel it
         const conditionalOrders = await this.exchange.fetchOpenOrders(payload.symbol, undefined, undefined, {
           'stop': true
         });
@@ -297,12 +285,12 @@ export class PhemexService {
         }
       } else {
         const openOrders = await this.exchange.fetchOpenOrders(payload.symbol);
-          const openShortOrder = openOrders.find(order => order.side === 'sell' && order.status === 'open');
-          if (openShortOrder) {
-            amount = openShortOrder.amount;
-          } else {
-            return { message: `No open short order found for ${payload.symbol}` };
-          }
+        const openShortOrder = openOrders.find(order => order.side === 'sell' && order.status === 'open');
+        if (openShortOrder) {
+          amount = openShortOrder.amount;
+        } else {
+          return { message: `No open short order found for ${payload.symbol}` };
+        }
       }
     }
 
