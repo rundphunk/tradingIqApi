@@ -73,10 +73,10 @@ So, for now the basics of this is working:
 - switchable config between live api & sandbox api
 - receive and compute values with names like TradingIQ automation parameters ( tp2 and panic are actually not used, because I don't know how it should be handled atm)
 - splitted the exchange specific implementation parts for order creation and updating workflow in separate files (actually only phemex tested .. bitfinex is only generated code, but as soon as I have an account there I will also check that)
+- add sl/tp directly when making an order instead of needing a separate request afterwards
 
 
-TODO: 
-- also add sl/tp directly when making an order instead of needing a separate request afterwards
+TODO:
 - clearify what to do with open positions when a new price is incoming (Is that even intented with TradingIQ in any case?)
 - modify to use with AWS lambda functions
 - support hedged account mode (only if needed there is a usecase for hedged mode)
