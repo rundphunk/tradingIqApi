@@ -19,7 +19,7 @@ export class WebhookController {
           result = await this.service.createLongOrder(req.body);
           break;
         case RouteActions.SetLongTpPrice:
-          result = await this.service.setLongStopLossPrice(req.body);
+          result = await this.service.setLongTakeProfitPrice(req.body);
           break;
         case RouteActions.SetLongSlPrice:
           result = await this.service.setLongStopLossPrice(req.body);
