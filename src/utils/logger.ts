@@ -1,5 +1,7 @@
 import dotenv from 'dotenv'; // Import dotenv
 import { createLogger, format, transports } from 'winston'; // Import winston
+import fs from 'fs';
+import path from 'path';
 
 dotenv.config(); // Load environment variables
 
@@ -15,7 +17,6 @@ export const logger = createLogger({
   ),
   transports: logToConsole ? [new transports.Console()] : []
 });
-
 
 export const logInfo = (message: string) => {
   if (logToConsole) logger.info(message);
@@ -49,4 +50,14 @@ export const withRequestLogging = (handler: (req: Request, res: Response) => Pro
       logRequestProcessingTime(requestTime, responseTime);
     }
   };
+};
+
+export const logToFile = (message: string) => {
+  const logDir = path.join(__dirname, '../../../logs');
+  if (!fs.existsSync(logDir)) {
+    fs.mkdirSync(logDir);
+  }
+  const logFile = path.join(logDir, `${new Date().toISOString().split('T')[0]}.log`);
+  const logMessage = `${new Date().toISOString()} - ${message}\n`;
+  fs.appendFileSync(logFile, logMessage);
 };

@@ -2,9 +2,9 @@ import { WebhookService } from '../src/services/webhook.service';
 import { IWebhookPayload } from '../src/interfaces/IWebhookPayload';
 import { PhemexService } from '../src/services/exchanges/phemex.service';
 // import { BitfinexService } from '../src/services/exchanges/bitfinex.service';
+import dotenv from 'dotenv';
 
-jest.mock('../src/services/exchanges/phemex.service');
-jest.mock('../src/services/exchanges/bitfinex.service');
+dotenv.config();
 
 describe('WebhookService', () => {
   let service: WebhookService;
@@ -15,11 +15,14 @@ describe('WebhookService', () => {
 
   beforeEach(() => {
     service = new WebhookService();
+    const exchangeService = service.getExchangeService('phemex');
+    expect(exchangeService).toBeDefined();
+    // const payload: IWebhookPayload = { symbol: 'ETH/USDT', };
   });
 
   it('should initialize exchange services based on environment variables', () => {
+    // console.log(process.env);
     expect(service.getExchangeService('phemex')).toBeInstanceOf(PhemexService);
-    // expect(service.getExchangeService('bitfinex')).toBeInstanceOf(BitfinexService);
   });
 
   it('should throw an error for unsupported exchange', () => {
@@ -27,58 +30,68 @@ describe('WebhookService', () => {
   });
 
   // it('should handle long entry price with a limit order', async () => {
-  //   const payload: IWebhookPayload = { exchange: 'phemex', symbol: 'BTC/USDT', amount: 0.1, orderType: 'limit' };
-  //   const exchangeService = service.getExchangeService('phemex');
-  //   // await service.handleLongOrder(payload);
-  //   expect(exchangeService.createLongOrder).toHaveBeenCalledWith(payload);
-  // });
+  //   const payload: IWebhookPayload = { exchange: 'phemex', symbol: 'ETH/USDT', amount: 0.1, orderType: 'limit', longLimitOrderPrice: 2500 };
+  //   // prepare
+  //   // await service.closeLongPositions(payload);
+  //   // await service.closeShortPositions(payload);
+  //   // create order
+  //   const promise = service.createLongOrder(payload);
+  //   expect(promise).resolves.not.toThrow();
+  //   // cleanup
+  //   // await service.closeLongPositions(payload);
+  //   // await service.closeShortPositions(payload);
+  // }, 10000); // Custom timeout of 10 seconds
 
   // it('should handle long entry price with a market order', async () => {
-  //   const payload: IWebhookPayload = { exchange: 'phemex', symbol: 'BTC/USDT', amount: 0.1, orderType: 'market' };
+  //   const payload: IWebhookPayload = { exchange: 'phemex', symbol: 'ETH/USDT', amount: 0.1, orderType: 'market' };
   //   const exchangeService = service.getExchangeService('phemex');
-  //   // await service.handleLongOrder(payload);
-  //   expect(exchangeService.createLongOrder).toHaveBeenCalledWith(payload);
+  //   await expect(service.createLongOrder(payload)).resolves.not.toThrow();
   // });
 
   // it('should handle set long TP price', async () => {
-  //   const payload: IWebhookPayload = { exchange: 'phemex', symbol: 'BTC/USDT' };
+  //   const payload: IWebhookPayload = { exchange: 'phemex', symbol: 'ETH/USDT', longPositionTp1: 5000 };
   //   const exchangeService = service.getExchangeService('phemex');
-  //   // await service.handleSetLongTpPrice(payload);
-  //   expect(exchangeService.setLongTakeProfitPrice).toHaveBeenCalledWith(payload);
+  //   await expect(service.setLongTakeProfitPrice(payload)).resolves.not.toThrow();
   // });
 
   // it('should handle set long SL price', async () => {
-  //   const payload: IWebhookPayload = { exchange: 'phemex', symbol: 'BTC/USDT' };
+  //   const payload: IWebhookPayload = { exchange: 'phemex', symbol: 'ETH/USDT', longPositionSl: 2300  };
   //   const exchangeService = service.getExchangeService('phemex');
-  //   // await service.handleSetLongSlPrice(payload);
-  //   expect(exchangeService.setLongStopLossPrice).toHaveBeenCalledWith(payload);
+  //   await expect(service.setLongStopLossPrice(payload)).resolves.not.toThrow();
   // });
 
-  // it('should handle short entry price', async () => {
-  //   const payload: IWebhookPayload = { exchange: 'phemex', symbol: 'BTC/USDT' };
+  // it('should handle short entry price with a limit order', async () => {
+  //   const payload: IWebhookPayload = { exchange: 'phemex', symbol: 'ETH/USDT', amount: 0.1, orderType: 'limit' };
   //   const exchangeService = service.getExchangeService('phemex');
-  //   // await service.handleShortOrder(payload);
+  //   await expect(service.createShortOrder(payload)).resolves.not.toThrow();
+  //   expect(exchangeService.createShortOrder).toHaveBeenCalledWith(payload);
+  // });
+
+  // it('should handle short entry price with a market order', async () => {
+  //   const payload: IWebhookPayload = { exchange: 'phemex', symbol: 'ETH/USDT', amount: 0.1, orderType: 'market' };
+  //   const exchangeService = service.getExchangeService('phemex');
+  //   await expect(service.createShortOrder(payload)).resolves.not.toThrow();
   //   expect(exchangeService.createShortOrder).toHaveBeenCalledWith(payload);
   // });
 
   // it('should handle set short TP price', async () => {
-  //   const payload: IWebhookPayload = { exchange: 'phemex', symbol: 'BTC/USDT' };
+  //   const payload: IWebhookPayload = { exchange: 'phemex', symbol: 'ETH/USDT', shortPositionTp1: 50000  };
   //   const exchangeService = service.getExchangeService('phemex');
-  //   // await service.handleSetShortTpPrice(payload);
+  //   await expect(service.setShortTakeProfitPrice(payload)).resolves.not.toThrow();
   //   expect(exchangeService.setShortTakeProfitPrice).toHaveBeenCalledWith(payload);
   // });
 
   // it('should handle set short SL price', async () => {
-  //   const payload: IWebhookPayload = { exchange: 'phemex', symbol: 'BTC/USDT' };
+  //   const payload: IWebhookPayload = { exchange: 'phemex', symbol: 'ETH/USDT', shortPositionSl: 150000  };
   //   const exchangeService = service.getExchangeService('phemex');
-  //   // await service.handleSetShortSlPrice(payload);
+  //   await expect(service.setShortStopLossPrice(payload)).resolves.not.toThrow();
   //   expect(exchangeService.setShortStopLossPrice).toHaveBeenCalledWith(payload);
   // });
 
   // it('should close long positions and orders', async () => {
   //   const payload: IWebhookPayload = { exchange: 'phemex', symbol: 'BTCUSD' };
   //   const exchangeService = service.getExchangeService('phemex');
-  //   // await service.handleCloseLong(payload);
+  //   await expect(service.closeLongPositions(payload)).resolves.not.toThrow();
   //   expect(exchangeService.closeLongPositions).toHaveBeenCalledWith(payload);
   //   expect(exchangeService.cancelLongOrders).toHaveBeenCalledWith(payload);
   // });
@@ -86,7 +99,7 @@ describe('WebhookService', () => {
   // it('should close short positions and orders', async () => {
   //   const payload: IWebhookPayload = { exchange: 'phemex', symbol: 'BTCUSD' };
   //   const exchangeService = service.getExchangeService('phemex');
-  //   // await service.handleCloseShort(payload);
+  //   await expect(service.closeShortPositions(payload)).resolves.not.toThrow();
   //   expect(exchangeService.closeShortPositions).toHaveBeenCalledWith(payload);
   //   expect(exchangeService.cancelShortOrders).toHaveBeenCalledWith(payload);
   // });
