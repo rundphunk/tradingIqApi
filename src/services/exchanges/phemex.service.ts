@@ -28,6 +28,7 @@ export class PhemexService {
   }
 
   async handleLongEntryPrice(payload: IWebhookPayload) {
+    const resultingOrders = [];
     await this.exchange.loadMarkets();    
     // await this.exchange.cancelAllOrders(payload.symbol); // cancelling all orders would lead to not being able to partly sell
 
@@ -54,8 +55,12 @@ export class PhemexService {
         payload.longLimitOrderPrice
       );
     }
+    resultingOrders.push(createdOrder.id);
+    // also add corresponding tp/sl orders directly
+    if (payload.longPositionTp1) resultingOrders.push(await this.handleSetLongTpPrice(payload));
+    if (payload.longPositionSl) resultingOrders.push(await this.handleSetLongSlPrice(payload));
 
-    return { message: 'Position opened', orderId: createdOrder.id };
+    return { message: 'Position opened', orders: resultingOrders.concat(', ')};
   }
 
   async handleSetLongTpPrice(payload: IWebhookPayload) {
@@ -124,6 +129,7 @@ export class PhemexService {
   }
 
   async handleShortEntryPrice(payload: IWebhookPayload) {
+    const resultingOrders = [];
     await this.exchange.loadMarkets();
     // await this.exchange.cancelAllOrders(payload.symbol); // cancelling all orders would lead to not being able to partly sell
 
@@ -150,8 +156,12 @@ export class PhemexService {
         payload.shortLimitOrderPrice
       );
     }
+    resultingOrders.push(createdOrder.id);
+    // also add corresponding tp/sl orders directly
+    if (payload.shortPositionTp1) resultingOrders.push(await this.handleSetShortTpPrice(payload));
+    if (payload.shortPositionSl) resultingOrders.push(await this.handleSetShortSlPrice(payload));
 
-    return { message: 'Position opened', orderId: createdOrder.id };
+    return { message: 'Position opened', orders: resultingOrders.concat(', ')};
   }
 
   async handleSetShortTpPrice(payload: IWebhookPayload) {

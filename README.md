@@ -81,6 +81,7 @@ TODO:
 - modify to use with AWS lambda functions
 - support hedged account mode (only if needed there is a usecase for hedged mode)
 - automated tests for each exchange in testnet mode
+- don't touch potentially existing orders with the same settings to be updated or created
 
 
 ## License
