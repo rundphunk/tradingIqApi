@@ -62,9 +62,45 @@ export class PhemexService {
       );
     }
     resultingOrders.push(createdOrder.id);
-    // also add corresponding tp/sl orders directly
-    if (payload.longPositionTp1) resultingOrders.push(await this.setLongTakeProfitPrice(payload));
-    if (payload.longPositionSl) resultingOrders.push(await this.setLongStopLossPrice(payload));
+
+    // Create OCO order for take profit and stop loss if both are provided
+    if (payload.longPositionTp1 && payload.longPositionSl) {
+      const ocoOrder = await this.exchange.createOrder(
+        payload.symbol,
+        'Limit',
+        'sell',
+        payload.amount,
+        payload.longPositionTp1,
+        {
+          'stopPrice': payload.longPositionSl,
+          'type': 'OCO'
+        }
+      );
+      resultingOrders.push(ocoOrder.id);
+    } else {
+      // Create individual orders if only one is provided
+      if (payload.longPositionTp1) {
+        const tpOrder = await this.exchange.createOrder(
+          payload.symbol,
+          'Limit',
+          'sell',
+          payload.amount,
+          payload.longPositionTp1
+        );
+        resultingOrders.push(tpOrder.id);
+      }
+      if (payload.longPositionSl) {
+        const slOrder = await this.exchange.createOrder(
+          payload.symbol,
+          'Stop',
+          'sell',
+          payload.amount,
+          payload.longPositionSl,
+          { 'stopPrice': payload.longPositionSl }
+        );
+        resultingOrders.push(slOrder.id);
+      }
+    }
 
     return { message: 'Position opened', orders: resultingOrders.concat(', ')};
   }
@@ -116,6 +152,27 @@ export class PhemexService {
       amount,
       payload.longPositionTp1
     );
+
+    // Check if stop loss exists and convert to OCO if needed
+    const openOrders = await this.exchange.fetchOpenOrders(payload.symbol, undefined, undefined, {
+      'stop': true
+    })
+    const existingSlOrder = openOrders.find(order => order.type === 'Stop' && order.side === 'sell' && order.status === 'open');
+    if (existingSlOrder) {
+      await this.exchange.cancelOrder(existingSlOrder.id, payload.symbol);
+      const ocoOrder = await this.exchange.createOrder(
+        payload.symbol,
+        'Limit',
+        'sell',
+        amount,
+        payload.longPositionTp1,
+        {
+          'stopPrice': existingSlOrder.stopPrice,
+          'type': 'OCO'
+        }
+      );
+      return { message: 'TakeProfit order placed as OCO', orderId: ocoOrder.id };
+    }
 
     return { message: 'TakeProfit order placed', orderId: createdOrder.id };
   }
@@ -174,6 +231,25 @@ export class PhemexService {
       params
     );
 
+    // Check if take profit exists and convert to OCO if needed
+    const openOrders = await this.exchange.fetchOpenOrders(payload.symbol);
+    const existingTpOrder = openOrders.find(order => order.type === 'limit' && order.side === 'sell' && order.status === 'open');
+    if (existingTpOrder) {
+      await this.exchange.cancelOrder(existingTpOrder.id, payload.symbol);
+      const ocoOrder = await this.exchange.createOrder(
+        payload.symbol,
+        'Limit',
+        'sell',
+        amount,
+        existingTpOrder.price,
+        {
+          'stopPrice': payload.longPositionSl,
+          'type': 'OCO'
+        }
+      );
+      return { message: 'StopLoss order placed as OCO', orderId: ocoOrder.id };
+    }
+
     return { message: 'StopLoss order placed', orderId: createdOrder.id };
   }
 
@@ -206,9 +282,45 @@ export class PhemexService {
       );
     }
     resultingOrders.push(createdOrder.id);
-    // also add corresponding tp/sl orders directly
-    if (payload.shortPositionTp1) resultingOrders.push(await this.setShortTakeProfitPrice(payload));
-    if (payload.shortPositionSl) resultingOrders.push(await this.setShortStopLossPrice(payload));
+
+    // Create OCO order for take profit and stop loss if both are provided
+    if (payload.shortPositionTp1 && payload.shortPositionSl) {
+      const ocoOrder = await this.exchange.createOrder(
+        payload.symbol,
+        'Limit',
+        'buy',
+        payload.amount,
+        payload.shortPositionTp1,
+        {
+          'stopPrice': payload.shortPositionSl,
+          'type': 'OCO'
+        }
+      );
+      resultingOrders.push(ocoOrder.id);
+    } else {
+      // Create individual orders if only one is provided
+      if (payload.shortPositionTp1) {
+        const tpOrder = await this.exchange.createOrder(
+          payload.symbol,
+          'Limit',
+          'buy',
+          payload.amount,
+          payload.shortPositionTp1
+        );
+        resultingOrders.push(tpOrder.id);
+      }
+      if (payload.shortPositionSl) {
+        const slOrder = await this.exchange.createOrder(
+          payload.symbol,
+          'Stop',
+          'buy',
+          payload.amount,
+          payload.shortPositionSl,
+          { 'stopPrice': payload.shortPositionSl }
+        );
+        resultingOrders.push(slOrder.id);
+      }
+    }
 
     return { message: 'Position opened', orders: resultingOrders.concat(', ')};
   }
@@ -260,6 +372,27 @@ export class PhemexService {
       amount,
       payload.shortPositionTp1
     );
+
+    // Check if stop loss exists and convert to OCO if needed
+    const openOrders = await this.exchange.fetchOpenOrders(payload.symbol, undefined, undefined, {
+      'stop': true
+    })
+    const existingSlOrder = openOrders.find(order => order.type === 'Stop' && order.side === 'buy' && order.status === 'open');
+    if (existingSlOrder) {
+      await this.exchange.cancelOrder(existingSlOrder.id, payload.symbol);
+      const ocoOrder = await this.exchange.createOrder(
+        payload.symbol,
+        'Limit',
+        'buy',
+        amount,
+        payload.shortPositionTp1,
+        {
+          'stopPrice': existingSlOrder.stopPrice,
+          'type': 'OCO'
+        }
+      );
+      return { message: 'TakeProfit order placed as OCO', orderId: ocoOrder.id };
+    }
 
     return { message: 'TakeProfit order placed', orderId: createdOrder.id };
   }
@@ -317,6 +450,25 @@ export class PhemexService {
       payload.shortPositionSl,
       params
     );
+
+    // Check if take profit exists and convert to OCO if needed
+    const openOrders = await this.exchange.fetchOpenOrders(payload.symbol);
+    const existingTpOrder = openOrders.find(order => order.type === 'limit' && order.side === 'buy' && order.status === 'open');
+    if (existingTpOrder) {
+      await this.exchange.cancelOrder(existingTpOrder.id, payload.symbol);
+      const ocoOrder = await this.exchange.createOrder(
+        payload.symbol,
+        'Limit',
+        'buy',
+        amount,
+        existingTpOrder.price,
+        {
+          'stopPrice': payload.shortPositionSl,
+          'type': 'OCO'
+        }
+      );
+      return { message: 'StopLoss order placed as OCO', orderId: ocoOrder.id };
+    }
 
     return { message: 'StopLoss order placed', orderId: createdOrder.id };
   }
