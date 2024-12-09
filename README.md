@@ -3,6 +3,8 @@
 ## Overview
 TradingIQ API is an automation API for trading on various cryptocurrency exchanges over TradingIQ smart indicators. It supports exchanges like Bitfinex and Phemex.
 
+Currently this is working with Phemex in one-way-mode only
+
 ## Getting Started
 1. Clone the repository.
 2. Copy `.env.template` to `.env` and fill in your API keys and other environment variables.
