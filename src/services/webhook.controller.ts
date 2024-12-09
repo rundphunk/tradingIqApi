@@ -37,7 +37,7 @@ export class WebhookController {
       res.status(200).json(result);
     } catch (error) {
       logError(`Webhook handling failed: ${(error as Error).message}`);
-      res.status(500).send('Webhook handling failed');
+      res.status(500).send(`Webhook handling failed: ${(error as Error).message}`);
     } finally {
       const responseTime = new Date();
       logRequestProcessingTime(requestTime, responseTime);

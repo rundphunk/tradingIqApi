@@ -28,14 +28,13 @@ export class PhemexService {
   }
 
   async handleLongEntryPrice(payload: IWebhookPayload) {
-    await this.exchange.loadMarkets();
-    await this.exchange.cancelAllOrders(payload.symbol);
+    await this.exchange.loadMarkets();    
+    // await this.exchange.cancelAllOrders(payload.symbol); // cancelling all orders would lead to not being able to partly sell
 
-    if (payload.leverage && this.exchange.has['setLeverage']) {
+    if (payload.leverage) {
+      if (!this.exchange.has['setLeverage']) throw new Error('Phemex does not support setting leverage');
       await this.exchange.setLeverage(payload.leverage, payload.symbol);
       console.log(`Leverage set to ${payload.leverage} for ${payload.symbol} on Phemex`);
-    } else {
-      throw new Error('Phemex does not support setting leverage');
     }
 
     let createdOrder = { id: '' };
@@ -126,13 +125,12 @@ export class PhemexService {
 
   async handleShortEntryPrice(payload: IWebhookPayload) {
     await this.exchange.loadMarkets();
-    await this.exchange.cancelAllOrders(payload.symbol);
+    // await this.exchange.cancelAllOrders(payload.symbol); // cancelling all orders would lead to not being able to partly sell
 
-    if (payload.leverage && this.exchange.has['setLeverage']) {
+    if (payload.leverage) {
+      if (!this.exchange.has['setLeverage']) throw new Error('Phemex does not support setting leverage');
       await this.exchange.setLeverage(payload.leverage, payload.symbol);
       console.log(`Leverage set to ${payload.leverage} for ${payload.symbol} on Phemex`);
-    } else {
-      throw new Error('Phemex does not support setting leverage');
     }
 
     let createdOrder = { id: '' };
