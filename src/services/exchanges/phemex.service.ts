@@ -29,8 +29,8 @@ export class PhemexService {
 
   async handleLongEntryPrice(payload: IWebhookPayload) {
     const resultingOrders = [];
-    await this.exchange.loadMarkets();    
-    // await this.exchange.cancelAllOrders(payload.symbol); // cancelling all orders would lead to not being able to partly sell
+    await this.exchange.loadMarkets();
+    await this.exchange.cancelAllOrders(payload.symbol);
 
     if (payload.leverage) {
       if (!this.exchange.has['setLeverage']) throw new Error('Phemex does not support setting leverage');
@@ -83,7 +83,9 @@ export class PhemexService {
 
     const openOrders = await this.exchange.fetchOpenOrders(payload.symbol);
     const existingTpOrder = openOrders.find(order => order.type === 'limit' && order.side === 'sell' && order.status === 'open');
-    if (existingTpOrder) {
+    if (existingTpOrder && existingTpOrder.price === payload.longPositionTp1) {
+      return { message: 'Existing TakeProfit order matches the new one', orderId: existingTpOrder.id };
+    } else if (existingTpOrder) {
       await this.exchange.cancelOrder(existingTpOrder.id, payload.symbol);
     }
 
@@ -109,7 +111,9 @@ export class PhemexService {
       'stop': true
     });
     const existingSlOrder = conditionalOrders.find(order => order.type === 'Stop' && order.side === 'sell' && order.status === 'open');
-    if (existingSlOrder) {
+    if (existingSlOrder && existingSlOrder.stopPrice === payload.longPositionSl) {
+      return { message: 'Existing StopLoss order matches the new one', orderId: existingSlOrder.id };
+    } else if (existingSlOrder) {
       await this.exchange.cancelOrder(existingSlOrder.id, payload.symbol);
     }
 
@@ -131,7 +135,7 @@ export class PhemexService {
   async handleShortEntryPrice(payload: IWebhookPayload) {
     const resultingOrders = [];
     await this.exchange.loadMarkets();
-    // await this.exchange.cancelAllOrders(payload.symbol); // cancelling all orders would lead to not being able to partly sell
+    await this.exchange.cancelAllOrders(payload.symbol);
 
     if (payload.leverage) {
       if (!this.exchange.has['setLeverage']) throw new Error('Phemex does not support setting leverage');
@@ -184,7 +188,9 @@ export class PhemexService {
 
     const openOrders = await this.exchange.fetchOpenOrders(payload.symbol);
     const existingTpOrder = openOrders.find(order => order.type === 'limit' && order.side === 'buy' && order.status === 'open');
-    if (existingTpOrder) {
+    if (existingTpOrder && existingTpOrder.price === payload.shortPositionTp1) {
+      return { message: 'Existing TakeProfit order matches the new one', orderId: existingTpOrder.id };
+    } else if (existingTpOrder) {
       await this.exchange.cancelOrder(existingTpOrder.id, payload.symbol);
     }
 
@@ -210,7 +216,9 @@ export class PhemexService {
       'stop': true
     });
     const existingSlOrder = conditionalOrders.find(order => order.type === 'Stop' && order.side === 'buy' && order.status === 'open');
-    if (existingSlOrder) {
+    if (existingSlOrder && existingSlOrder.stopPrice === payload.shortPositionSl) {
+      return { message: 'Existing StopLoss order matches the new one', orderId: existingSlOrder.id };
+    } else if (existingSlOrder) {
       await this.exchange.cancelOrder(existingSlOrder.id, payload.symbol);
     }
 
