@@ -1,4 +1,3 @@
-<<<<<<< HEAD
 {
   "name": "trading-iq-automation-api",
   "version": "0.0.1",
@@ -32,38 +31,3 @@
     "typescript": "^5.2.2"
   }
 }
-=======
-{
-  "name": "trading-iq-automation-api",
-  "version": "0.0.1",
-  "main": "src/server.ts",
-  "scripts": {
-    "_dev": "ts-node-dev --respawn --transpileOnly src/server.ts",
-    "dev": "ts-node-dev --respawn src/server.ts",
-    "build": "tsc",
-    "start": "node dist/server.js",
-    "test": "jest --passWithNoTests"
-  },
-  "dependencies": {
-    "@types/express": "^5.0.0",
-    "axios": "^1.5.0",
-    "ccxt": "^3.0.0",
-    "dotenv": "^16.0.3",
-    "express": "^4.18.2",
-    "supertest": "^7.0.0",
-    "winston": "^3.9.0"
-  },
-  "devDependencies": {
-    "@types/jest": "^29.5.3",
-    "@types/node": "^20.4.9",
-    "eslint": "^8.46.0",
-    "eslint-config-prettier": "^9.0.0",
-    "eslint-plugin-prettier": "^5.0.0",
-    "jest": "^29.6.1",
-    "prettier": "^3.0.3",
-    "ts-jest": "^29.1.0",
-    "ts-node-dev": "^2.0.0",
-    "typescript": "^5.2.2"
-  }
-}
->>>>>>> a34b550ff69e15b298aff73a6573db3d2f9b064e
