@@ -67,14 +67,14 @@ So, for now the basics of this is working:
 - actually Phemex supported
 - support contracts in OneWayMode
 - support spot market
-- triggers market or limit order
+- triggers market or limit order (limit order as default)
 - leverage setting (only for contracts, no leveraged spot atm)
 - update sl/tp depending on the size of an existing position (or alternatively an open order, if no position was already executed)
 - switchable config between live api & sandbox api
 - receive and compute values with names like TradingIQ automation parameters ( tp2 and panic are actually not used, because I don't know how it should be handled atm)
 - splitted the exchange specific implementation parts for order creation and updating workflow in separate files (actually only phemex tested .. bitfinex is only generated code, but as soon as I have an account there I will also check that)
-- add sl/tp directly when making an order instead of needing a separate request afterwards
-- if amount, stopLossAmount or takeProfitAmount isn't given in the payload explicitly, automatically try to determine amount based on existing position sizes (contract & spot)
+- add sl/tp orders directly when making an long/short order instead of needing separate requests afterwards
+- if amount, stopLossAmount or takeProfitAmount isn't given in the payload explicitly, automatically try to determine the amounts based on existing position sizes (contract & spot)
 
 
 TODO:
