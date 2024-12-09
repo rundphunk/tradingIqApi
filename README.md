@@ -62,5 +62,26 @@ Currently this is working with Phemex in one-way-mode only
 ## Environment Variables
 Refer to `.env.template` for the required environment variables. Make sure to set the API keys and secrets for the exchanges you want to use.
 
+## Features
+So, for now the basics of this is working:
+- actually Phemex supported
+- support contracts in OneWayMode
+- support spot market
+- triggers market or limit order
+- leverage setting (only for contracts, no leveraged spot atm)
+- update sl/tp depending on the size of an existing position (or alternatively an open order, if no position was already executed)
+- switchable config between live api & sandbox api
+- receive and compute values with names like TradingIQ automation parameters ( tp2 and panic are actually not used, because I don't know how it should be handled atm)
+- splitted the exchange specific implementation parts for order creation and updating workflow in separate files (actually only phemex tested .. bitfinex is only generated code, but as soon as I have an account there I will also check that)
+
+
+TODO: 
+- also add sl/tp directly when making an order instead of needing a separate request afterwards
+- clearify what to do with open positions when a new price is incoming (Is that even intented with TradingIQ in any case?)
+- modify to use with AWS lambda functions
+- support hedged account mode (only if needed there is a usecase for hedged mode)
+- automated tests for each exchange in testnet mode
+
+
 ## License
 This project is licensed under the MIT License.
