@@ -152,59 +152,47 @@ export class PhemexServiceSpot {
   }
 
   async setLongTakeProfitPrice(payload: IWebhookPayload) {
-    let amount;
-    if (payload.amount) { // if we set the amount in the payload we use that and dont look for existing orders or positions
-      amount = payload.amount;
+    const openOrders = await this.exchange.fetchOpenOrders(payload.symbol);
+    const openLongOrder = openOrders.find(order => order.side === 'buy' && order.status === 'open');
+    if (openLongOrder) {
+      const params = {
+        takeProfitPrice: payload.longPositionTp1
+      };
+      await this.exchange.editOrder(
+        openLongOrder.id,
+        payload.symbol,
+        'Limit',
+        'buy',
+        openLongOrder.amount,
+        openLongOrder.price,
+        params
+      );
+      return { message: 'TakeProfit price set inside existing long order', orderId: openLongOrder.id };
     } else {
-      
-        const openOrders = await this.exchange.fetchOpenOrders(payload.symbol);
-          const openLongOrder = openOrders.find(order => order.side === 'buy' && order.status === 'open');
-          if (openLongOrder) {
-            amount = openLongOrder.amount;
-          } else {
-            return { message: `No open long order found for ${payload.symbol}` };
-          }
+      return { message: `No open long order found for ${payload.symbol}` };
     }
-
-    const createdOrder = await this.exchange.createOrder(
-      payload.symbol,
-      'Limit',
-      'sell',
-      amount,
-      payload.longPositionTp1
-    );
-
-    return { message: 'TakeProfit order placed', orderId: createdOrder.id };
   }
 
   async setLongStopLossPrice(payload: IWebhookPayload) {
-    let amount;
-    if (payload.stopLossAmount) { // if we set the amount in the payload we use that and dont look for existing orders or positions
-      amount = payload.stopLossAmount;
+    const openOrders = await this.exchange.fetchOpenOrders(payload.symbol);
+    const openLongOrder = openOrders.find(order => order.side === 'buy' && order.status === 'open');
+    if (openLongOrder) {
+      const params = {
+        stopPrice: payload.longPositionSl
+      };
+      await this.exchange.editOrder(
+        openLongOrder.id,
+        payload.symbol,
+        'Stop',
+        'sell',
+        openLongOrder.amount,
+        payload.longPositionSl,
+        params
+      );
+      return { message: 'StopLoss order modified', orderId: openLongOrder.id };
     } else {
-    
-        const openOrders = await this.exchange.fetchOpenOrders(payload.symbol);
-          const openLongOrder = openOrders.find(order => order.side === 'buy' && order.status === 'open');
-          if (openLongOrder) {
-            amount = openLongOrder.amount;
-          } else {
-            return { message: `No open long order found for ${payload.symbol}` };
-          }
+      return { message: `No open long order found for ${payload.symbol}` };
     }
-
-    const params = {
-      stopPrice: payload.longPositionSl
-    };
-    const createdOrder = await this.exchange.createOrder(
-      payload.symbol,
-      'Stop',
-      'sell',
-      amount,
-      payload.longPositionSl,
-      params
-    );
-
-    return { message: 'StopLoss order placed', orderId: createdOrder.id };
   }
 
   async setShortTakeProfitPrice(payload: IWebhookPayload) {
@@ -263,5 +251,10 @@ export class PhemexServiceSpot {
     );
 
     return { message: 'StopLoss order placed', orderId: createdOrder.id };
+  }
+
+  handleOrderFulfillment(message: any) {
+    console.log(`Spot order ${message.orderID} has been fulfilled`);
+    // Add additional logic for spot order fulfillment here
   }
 }

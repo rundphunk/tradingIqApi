@@ -2,6 +2,7 @@ export interface IWebhookPayload {
     // Position settings
     exchange?: string;
     symbol: string;
+    // tradingIQKey?: string;
     amount?: number;
     stopLossAmount?: number;
     takeProfitAmount?: number;
@@ -21,4 +22,5 @@ export interface IWebhookPayload {
     // panicProfitTp1?: number;
     // panicProfitTp2?: number;
     // panicProfitSl?: number;
+
 }

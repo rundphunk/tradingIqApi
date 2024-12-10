@@ -10,12 +10,16 @@
     "test": "cross-env NODE_ENV=test jest --passWithNoTests"
   },
   "dependencies": {
+    "@types/websocket": "^1.0.10",
+    "@types/ws": "^8.5.13",
     "axios": "^1.5.0",
     "ccxt": "^3.0.0",
     "dotenv": "^16.4.7",
     "express": "^4.18.2",
     "supertest": "^7.0.0",
-    "winston": "^3.9.0"
+    "websocket": "^1.0.35",
+    "winston": "^3.9.0",
+    "ws": "^8.18.0"
   },
   "devDependencies": {
     "@types/express": "^5.0.0",
